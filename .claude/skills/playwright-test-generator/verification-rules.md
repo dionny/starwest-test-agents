@@ -1,0 +1,119 @@
+# Verification Rules (V1–V6)
+
+<!-- V-RULE-CONTRACT: V1=primary-outcome;V2=assertion-falsification;V3=behavior-fault-injection;V4=write-contract-proof;V5=repeat-and-isolation;V6=independent-re-review;verdicts=PASS,FAIL,CANNOT_VERIFY,ERROR;source=immutable;install=forbidden -->
+<!-- V-RESULT-SCHEMA: candidate,runner,verification.V1,verification.V2,verification.V3,verification.V4,verification.V5,verification.V6,sourceUnchanged,temporaryArtifactsRemaining -->
+
+These rules verify generated Playwright tests without installing packages or requiring `npx`. Treat a generated spec as a candidate until every applicable rule passes. Mutations run only against a temporary or project-approved scratch copy; the source candidate must remain byte-identical.
+
+## Capability discovery and command selection
+
+Before verification, read `package.json`, lockfiles, Playwright config, testing docs, CI workflows, fixtures, and existing scripts. Prefer the narrowest repository-native command that already runs the target spec. Examples include `pnpm test:e2e -- <spec>`, `npm run test:e2e -- <spec>`, `yarn playwright test <spec>`, or `bun run test:e2e -- <spec>`. Do not install a package, add a script, rewrite lint config, or invent a generic `npx` command when the repository already defines its runner.
+
+If the project already has mutation, coverage, lint, accessibility, visual, or fault-injection tooling, reuse it. Otherwise use Playwright-native temporary probes. Existing tooling is an implementation of a V-rule, not a prerequisite.
+
+Do not begin browser-backed verification from a target URL unless exploration recorded an approved DNS snapshot, pinned peer probes, and a no-drift result. For an untrusted remote target, verification also requires the same enforceable browser egress policy used during exploration; a Playwright route callback is not a transport boundary. If those controls are unavailable, do not navigate and record the affected browser-backed rule as `CANNOT_VERIFY`.
+
+When auth depends on named environment variables, credential values remain local to the user's environment. The agent may inspect only each variable's presence and non-empty status; it never requests, reads, prints, echoes, logs, or asks the user to paste a value.
+
+## Verdicts
+
+- `PASS` — the expected evidence was observed.
+- `FAIL` — the test stayed green under a mutation that should have made it red, was flaky, or lost its required proof.
+- `CANNOT_VERIFY` — the mutation cannot be performed safely or the required environment/evidence is unavailable. State the exact reason; do not guess.
+- `ERROR` — the verifier itself failed. Do not misreport this as a test defect.
+
+## V1 — Primary Outcome
+
+Name one observable product outcome per scenario before generation. The test title, actions, and primary assertion must describe the same behavior. Record the outcome in the approved scenario plan; a package-specific marker such as `@primary-assert` is optional and must not be added unless the project already uses it.
+
+## V2 — Assertion Falsification
+
+Use V2 only when the candidate reaches an evidenced deterministic settled-state gate before its primary assertion (for example, a proven terminal response, completed navigation plus an application-specific ready state, or a terminal UI state). A passing web-first assertion on another element produced by the same render as the primary target counts as a terminal UI state; the primary assertion itself, `waitForTimeout`, and `networkidle` do not. In a temporary copy, mutate one single-line, framework-native primary matcher only when the mutation is guaranteed contradictory after that same gate, then run the repository-native targeted command. The mutated run must turn red **because the changed primary assertion reports the expected contradictory mismatch**. Capture the failure location and matcher diagnostics and require them to identify that exact mutated assertion. A nonzero exit caused only by setup, navigation, fixture, browser, timeout, worker, reporter, or other unrelated infrastructure failure does not kill the mutant: record `ERROR` when the verifier/run infrastructure failed, or `CANNOT_VERIFY` when causal attribution cannot be established.
+
+| Original | Conditionally safe temporary inverse |
+|---|---|
+| `toBeVisible()` | `not.toBeVisible()` after the same settled-state gate |
+| `not.toBeVisible()` | `toBeVisible()` after the same settled-state gate |
+| `toHaveText(x)` | `not.toHaveText(x)` after the same settled-state gate |
+| `toHaveURL(x)` | `not.toHaveURL(x)` after the same settled-state gate |
+| `toHaveCount(n)` | `not.toHaveCount(n)` after the same settled-state gate |
+
+Return `CANNOT_VERIFY` when the assertion observes transitional or eventually changing state, no deterministic settled-state gate is evidenced, the inverse is not guaranteed contradictory after that gate, or the test depends on uncontrolled timing between separate runs. Also return it for custom matchers, multiple assertions on one line, dynamic matcher construction, multi-line chains that cannot be rewritten safely, or a candidate the project runner cannot execute from scratch. Never mutate the source candidate. `FAIL` if a valid contradictory mutation survives. Return `ERROR` or `CANNOT_VERIFY`, never `PASS`, when the mutant run is red but its output does not prove failure at the changed primary assertion.
+
+## V3 — Behavior Fault Injection
+
+Use `page.route()` or an existing project fixture to corrupt a product input that repository source, a trace, or observed network evidence proves is load-bearing: success to error, expected text to a different value, non-empty to empty, response to abort, or a bounded delay.
+
+Before applying the fault, record both (1) the exact unchanged primary assertion expected to fail and (2) the observable mismatch that its matcher is expected to report under that fault. First require the unfaulted candidate to pass. Design the fault so the declared settled-state gate still passes and the run reaches the primary. The unchanged primary assertion must turn red. The fault kills the test only when the faulted run turns red at that exact primary assertion and its diagnostics match the declared observable difference. A red run with a different failure location or mismatch is `ERROR` when the verifier or run infrastructure failed, or `CANNOT_VERIFY` when causal attribution cannot be established; it is never `PASS`.
+
+For an error scenario, fault the cause the approved plan named as the distinguishing signal, and check that the unchanged primary assertion reports that cause. When the plan recorded `GENERIC_BY_CONTRACT`, do not swap one error cause for another: the product renders the same screen for both, so a passing test is correct behavior, not a weak assertion. Fault the failure itself instead — turn the faulted response into the success the scenario denies — so the generic message must disappear for the unchanged primary assertion to fail. A fault that keeps the same screen proves nothing here and is `CANNOT_VERIFY`, not `FAIL`.
+
+Do not invent endpoints or mutate third-party/production traffic. Return `CANNOT_VERIFY` when no safe, local, interceptable dependency is evidenced. This per-scenario runtime declaration is not the `generator-faultkill-v1` planning DSL and does not change that benchmark's frozen plan language.
+
+## V4 — Write Contract Proof
+
+For signup, checkout, save, delete, toggle, and similar writes, establish request observation before the action and prove method, endpoint, relevant payload, and expected cardinality. Pair request proof with the user-visible outcome. Also inject a failed write and prove success UI does not remain accepted: the failed-write run must turn red at the unchanged primary assertion or at a declared settled-state gate, with a mismatch showing that the success state was not accepted; red anywhere else is `CANNOT_VERIFY`, or `ERROR` when the verifier itself failed. A scenario whose action is itself a rejected write needs no separate injection; its request proof and the re-read below cover this. When a failed write's expected outcome is that nothing changed, read that state after the failed request could have changed it: reload, or wait for the re-fetch that reads it, before asserting absence. An absence assertion on a view the failure did not refresh cannot see a server that stored the data anyway. Optimistic DOM state alone is not write success.
+
+## V5 — Repeat and Isolation
+
+Use repository-native commands to run the candidate alone, repeatedly with the project's supported repeat mechanism, and in its normal suite context. Exercise normal CI parallelism when the project supports it. A pass after retry is flaky evidence, not a clean pass. Keep repetitions bounded. A parallel mode the repository cannot express, or a mode the project deliberately does not use, such as parallel runs under `workers: 1` or `test.describe.configure({ mode: 'serial' })`, is `N/A` within V5, including a serial setting the approved plan added; V5 is `CANNOT_VERIFY` only when its solo, repeat, or suite-context run cannot be performed.
+
+Before repeating a write-producing scenario, prove at least one replay-safe boundary:
+
+1. the write carries an idempotency key whose enforcement is proven at the persistent system boundary;
+2. every attempt uses disposable state that is reset or rolled back before and after that attempt; or
+3. every write is fully stubbed or intercepted, with evidence that no persistent boundary is reached.
+
+The suite-context mode is only interpretable against a recorded baseline or a recorded absence of one. A repository with no existing coverage of the target area has nothing to run, so `baseline not applicable` keeps V5 interpretable and does not block completion. When specs exist but the baseline could not be run, record the suite-context mode as `CANNOT_VERIFY` with that reason rather than reading its result as isolation evidence, and never count a failure the baseline already recorded as a candidate defect.
+
+A disabled button, double-click guard, unique UI value, or loopback frontend alone does not prove replay safety. If none of the three boundaries is proven, do not replay the persistent write. Record V5 as `CANNOT_VERIFY` and return `PARTIAL/BLOCKED` under the completion matrix. A single normal run may still provide V1/V4 evidence, but it cannot substitute for V5 repetition.
+
+## V6 — Independent Re-review
+
+The writer or debugger cannot approve its own output. Run `e2e-reviewer` through a distinct fresh-context, read-only reviewer actor or process that did not write or repair the candidate. Give it the candidate paths and the reviewer contract, not the writer's conclusions; require a recorded verdict and evidence: quote the reviewer's verdict line verbatim with an identifier for the reviewer actor, also when another agent relays it; a paraphrased verdict is `CANNOT_VERIFY`. Inline self-review by the writer or debugger cannot produce `PASS`. Return `CANNOT_VERIFY` when the host cannot provide a separate reviewer context or cannot keep that reviewer read-only.
+
+Run this independent review after generation and again after any debugger repair. During repair, expected values, primary outcome, assertion target, scenario count, and request proof are immutable. The debugger may fix only evidenced mechanics such as locator, wait strategy, navigation, fixture, setup order, or test data. It must not delete/skip a test or weaken an assertion to manufacture green; return `NOFIX` when behavior and approved intent disagree.
+
+## Temporary-copy safety
+
+Prefer an existing gitignored scratch directory accepted by the project config. Otherwise use a uniquely named temporary spec in the configured test directory and remove it in `finally`/`trap`; the copy may keep only the scenario under test. Before and after mutation, hash the candidate and inspect `git status`; completion requires an unchanged candidate and no verifier artifacts in the repository. Files under Playwright's output folders are runtime output, not verifier artifacts, even when a verification run wrote them. Compare each status against the starting snapshot from Step 3, so a path the user had already changed is not mistaken for a verifier artifact and a leftover artifact cannot hide among the user's changes. A gitignored scratch directory is invisible to that comparison; check it directly.
+
+## Structured result contract
+
+Record the result in this shape so an omitted or unavailable proof is visible rather than silently treated as a pass:
+
+```json
+{
+  "candidate": "tests/example.spec.ts",
+  "runner": "repository-native targeted command",
+  "verification": {
+    "V1": {"status": "PASS", "evidence": "observable primary outcome"},
+    "V2": {"status": "PASS", "evidence": "settled-state contradictory mutation failed"},
+    "V3": {"status": "CANNOT_VERIFY", "reason": "no evidenced interceptable dependency"},
+    "V4": {"status": "PASS", "evidence": "one expected write request"},
+    "V5": {"status": "PASS", "evidence": "bounded solo/repeat/suite runs"},
+    "V6": {"status": "PASS", "evidence": "fresh-context read-only reviewer verdict"}
+  },
+  "sourceUnchanged": true,
+  "temporaryArtifactsRemaining": []
+}
+```
+
+Every applicable V-rule needs one of the four verdicts. When scenarios differ, record the most restrictive verdict for that V-rule, in the order `FAIL`, `ERROR`, `CANNOT_VERIFY`, `PASS`, and give the per-scenario breakdown in `evidence` or `reason`. Use `reason`, not invented evidence, for `CANNOT_VERIFY` or `ERROR`. A completion report is invalid when `sourceUnchanged` is false, temporary artifacts remain, an applicable V-rule is omitted, or the write set contains a path outside the approved tables.
+
+### Completion status matrix
+
+| Condition | Allowed final status |
+|---|---|
+| Applicable V4 is `PASS` (or explicitly `N/A` only for a read-only scenario), applicable V5 is `PASS`, V6 is `PASS`, and the other completion gates pass | `Complete` |
+| Applicable V4 or V5 is `CANNOT_VERIFY` | `PARTIAL/BLOCKED` with the exact missing capability or evidence |
+| Applicable V4 or V5 is `ERROR` | `PARTIAL/BLOCKED` with the verifier error; never reinterpret it as product evidence |
+| Applicable V4 or V5 is `FAIL` | `BLOCKED` until the candidate is repaired and reverified |
+| V6 is `CANNOT_VERIFY` or `ERROR` | `PARTIAL/BLOCKED` with the missing reviewer separation or the verifier error |
+| V6 is `FAIL` | `BLOCKED` until the candidate is repaired and independently re-reviewed |
+| V1, V2, or V3 is `FAIL` | `BLOCKED` until the candidate is repaired and reverified |
+| V1 is `CANNOT_VERIFY` or `ERROR` | `PARTIAL/BLOCKED` with the missing primary-outcome evidence |
+| V2 or V3 is `CANNOT_VERIFY` or `ERROR` | Reported with its reason; does not by itself block `Complete` |
+| The write set contains a path outside the approved generated-file and control-file tables | `PARTIAL/BLOCKED` naming the path and its status; the path is reported, not deleted |
+
+`CANNOT_VERIFY` and `ERROR` are honest outcomes, but they are not successful completion evidence for write proof, repeat/isolation, or independent re-review. Never emit a `Complete` heading when an applicable V4 or V5, or V6, has either status. The same holds for V1.

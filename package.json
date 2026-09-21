@@ -1,0 +1,15 @@
+{
+  "name": "starwest-test-agents",
+  "version": "1.0.0",
+  "private": true,
+  "description": "STARWEST 2026 take-home: Playwright Test Agents against the AUT Checkout Lab, zero install via GitHub Codespaces",
+  "type": "commonjs",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0"
+  }
+}

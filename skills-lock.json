@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "skills": {
+    "cypress-debugger": {
+      "source": "voidmatcha/e2e-skills",
+      "sourceType": "github",
+      "skillPath": "skills/cypress-debugger/SKILL.md",
+      "computedHash": "abbc3680b9afdfdc0edefd1085338422af1daf78fd3d0d122e0834653418362c"
+    },
+    "e2e-reviewer": {
+      "source": "voidmatcha/e2e-skills",
+      "sourceType": "github",
+      "skillPath": "skills/e2e-reviewer/SKILL.md",
+      "computedHash": "2baa1b9ea061815636d1d17cab6d936d881820d47027a4820f1b10082074b98b"
+    },
+    "playwright-debugger": {
+      "source": "voidmatcha/e2e-skills",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-debugger/SKILL.md",
+      "computedHash": "55998b824570729f1f8930e7fd9bde126a15199b62b9a715f3291ba6a403855e"
+    },
+    "playwright-dev": {
+      "source": "microsoft/playwright",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/playwright-dev/SKILL.md",
+      "computedHash": "2e0b3c8d86f09fe0451c18ebf4b7e47fb34535b1c10c53c89ede57afdf4adb03"
+    },
+    "playwright-devops": {
+      "source": "microsoft/playwright",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/playwright-devops/SKILL.md",
+      "computedHash": "5f6899cfc05fcd27045190a7fc733eb299460a49573bbe898f74f800af8b7e77"
+    },
+    "playwright-test-generator": {
+      "source": "voidmatcha/e2e-skills",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-test-generator/SKILL.md",
+      "computedHash": "b7ed5fda1ea070e260dd16eccc834fb4ff3c7a39064e6699029f0a486c8b9e02"
+    },
+    "playwright-test-results": {
+      "source": "microsoft/playwright",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/playwright-test-results/SKILL.md",
+      "computedHash": "c1b81d75d37b87c8fa3aaaff601dcf0b72128fbcce7a70a0f3d193e99e9c5daf"
+    },
+    "playwright-triage": {
+      "source": "microsoft/playwright",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/playwright-triage/SKILL.md",
+      "computedHash": "fdf69315e247a0e0baaf6bdbbf7b5042fe37bb816d563ca7d0cee6fd62d87966"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "STARWEST 2026 Test Agents",
+  "image": "mcr.microsoft.com/playwright:v1.63.0-noble",
+  "postCreateCommand": "npm ci && npm install -g @anthropic-ai/claude-code",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-playwright.playwright", "GitHub.copilot", "GitHub.copilot-chat"]
+    }
+  },
+  "remoteEnv": {
+    "PLAYWRIGHT_BROWSERS_PATH": "/ms-playwright"
+  },
+  "hostRequirements": { "cpus": 2, "memory": "4gb" }
+}
