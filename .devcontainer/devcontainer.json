@@ -4,11 +4,23 @@
   "postCreateCommand": "npm ci && npm install -g @anthropic-ai/claude-code",
   "customizations": {
     "vscode": {
-      "extensions": ["ms-playwright.playwright", "GitHub.copilot", "GitHub.copilot-chat"]
+      "extensions": [
+        "ms-playwright.playwright",
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ]
     }
   },
   "remoteEnv": {
     "PLAYWRIGHT_BROWSERS_PATH": "/ms-playwright"
   },
-  "hostRequirements": { "cpus": 2, "memory": "4gb" }
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
+  }
 }
